@@ -1,0 +1,15 @@
+# NeoForge 模组配置文件
+modLoader="javafml"
+loaderVersion="[21,)"  # 对应MC 1.21.x
+license="MIT"
+
+# 你的模组信息
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="Combat Perspective"
+authors="YourName"
+description="A.A.A"
+
+# 👇 关键！告诉游戏加载你的Mixin配置文件
+mixins = ["combatperspective.mixins.json"]
