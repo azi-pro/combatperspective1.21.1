@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Camera.class)
 public class CameraMixin {
     @Unique
-    private float camerayaw;  // 世界水平角度固定(北朝(
+    private float camerayaw;  // 世界水平角度固定(北朝(朝北
 
     @Inject(method = "setup",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;move(FFF)V"),
