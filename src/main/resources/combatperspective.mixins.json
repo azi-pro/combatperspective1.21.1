@@ -7,8 +7,10 @@
     "CameraInvoker",
     "CameraMixin",
     "CameraTypeMixin",
+    "ClientLevelInvoker",
     "CommandsMixin",
     "EntityMixin",
+    "GameRendererInvoker",
     "GameRendererMixin",
     "GuiMixin",
     "KeyboardHandlerMixin",
@@ -19,6 +21,9 @@
     "ModelPartCubeMixin",
     "MouseHandlerMixin"
 
+  ],
+  "client": [
+    "LivingEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1
