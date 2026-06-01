@@ -36,18 +36,13 @@ public class ModItems {
             DeferredRegister.createItems(CombatPerspective.MOD_ID);
 
     // =========================================================================
-    // 注册铁制长剑
-    // ITEMS.register() 注册一个物品到游戏注册表
-    // "weapon/iron_longsword"：物品的资源路径（完整为 combatperspective:weapon/iron_longsword）
-    // () -> new SwordItem(...)：物品工厂 lambda 表达式
-    // SwordItem：剑物品类，自带攻击动画和耐久消耗
-    // CPWeaponTier.LONG_SWORD：使用的工具等级
-    // .attributes()：设置物品的属性（伤害、速度等）
-    // .stacksTo(1)：最大堆叠数量为 1（剑不能堆叠）
+    // 注册战斗长剑
+    // 使用 CPSword 以支持高附魔值
+    // -2.4F = 攻击速度（原版铁剑是 -2.4）
     // =========================================================================
     public static final DeferredItem<Item> Iron_LongSword = ITEMS.register("weapon/iron_longsword",
-        () -> new SwordItem(CPTier.LONG_SWORD, new Item.Properties()
-                .attributes(SwordItem.createAttributes(CPTier.LONG_SWORD, 1, -2.1F))
+        () -> new CPSword(CPTier.LONG_SWORD, new Item.Properties()
+                .attributes(SwordItem.createAttributes(CPTier.LONG_SWORD, 1, -2.4F))
                 .stacksTo(1)
         )
     );
