@@ -1,25 +1,67 @@
+# CombatPerspective 模组
 
-Installation information
-=======
+战斗视角模组模板，支持玩家在第三人称视角下，相机自动朝向最远触及点。
 
-This template repository can be directly cloned to get you started with a new
-mod. Simply create a new repository cloned from this one, by following the
-instructions provided by [GitHub](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
+基于 **NeoForge 1.21.1** for Minecraft 1.21.1。
 
-Once you have your clone, simply open the repository in the IDE of your choice. The usual recommendation for an IDE is either IntelliJ IDEA or Eclipse.
+---
 
-If at any point you are missing libraries in your IDE, or you've run into problems you can
-run `gradlew --refresh-dependencies` to refresh the local cache. `gradlew clean` to reset everything 
-{this does not affect your code} and then start the process again.
+## 安装
 
-Mapping Names:
-============
-By default, the MDK is configured to use the official mapping names from Mojang for methods and fields 
-in the Minecraft codebase. These names are covered by a specific license. All modders should be aware of this
-license. For the latest license text, refer to the mapping file itself, or the reference copy here:
-https://github.com/NeoForged/NeoForm/blob/main/Mojang.md
+1. 直接克隆此仓库作为模板，参考 [GitHub 官方教程](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template)
+2. 使用 `git clone` 克隆到你本地
+3. 用 IntelliJ IDEA 或 Eclipse 打开项目
 
-Additional Resources: 
-==========
-Community Documentation: https://docs.neoforged.net/  
-NeoForged Discord: https://discord.neoforged.net/
+常见问题处理：
+```bash
+./gradlew --refresh-dependencies  # 刷新依赖库
+./gradlew clean                    # 重置构建（不清除代码）
+```
+
+## 使用
+
+### 生成 IDE 配置
+```bash
+./gradlew genIntellijRuns   # 生成 IDEA 运行配置
+./gradlew idea              # 生成 IDEA 项目文件
+```
+
+### 运行测试
+```bash
+./gradlew runClient         # 运行客户端测试
+./gradlew runServer         # 运行服务端测试
+./gradlew runData           # 运行数据生成
+```
+
+### 构建发布
+```bash
+./gradlew build             # 构建 JAR 文件
+# 输出位置：build/libs/
+```
+
+---
+
+## 配置项
+
+配置文件位置：`config/combatperspective-common.toml`
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `enableReachCamera` | false | 启用触及相机 |
+| `reachDistance` | 6.0 | 最远触及距离 (1-20) |
+| `cameraDistance` | 2.0 | 相机与玩家距离 (0-10) |
+| `cameraHeight` | 0.7 | 相机高度 (-5 to 5) |
+| `cameraSide` | 0.0 | 相机左右偏移 (-5 to 5) |
+
+---
+
+## 映射说明
+
+默认使用 Mojang 官方映射名。方法/字段命名需遵守 [Mojang License](https://github.com/NeoForged/NeoForm/blob/main/Mojang.md)。
+
+---
+
+## 资源链接
+
+- 社区文档：https://docs.neoforged.net/
+- NeoForged Discord：https://discord.neoforged.net/
