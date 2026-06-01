@@ -1,37 +1,18 @@
 // =============================================================================
 // LivingEntityMixin.java - 生物实体 Mixin（跳跃逻辑）
 // =============================================================================
-// 包声明
+
 package com.aaa.combatperspective.mixin;
 
-// 导入 Minecraft 主类
 import net.minecraft.client.Minecraft;
-
-// 导入本地玩家类
 import net.minecraft.client.player.LocalPlayer;
-
-// 导入数学工具类
 import net.minecraft.util.Mth;
-
-// 导入生物实体类
 import net.minecraft.world.entity.LivingEntity;
-
-// 导入三维向量类
 import net.minecraft.world.phys.Vec3;
-
-// 导入 Mixin 注解
 import org.spongepowered.asm.mixin.Mixin;
-
-// 导入 @Invoker 注解，用于调用目标类的私有方法
 import org.spongepowered.asm.mixin.gen.Invoker;
-
-// 导入注入注解
 import org.spongepowered.asm.mixin.injection.At;
-
-// 导入注入注解
 import org.spongepowered.asm.mixin.injection.Inject;
-
-// 导入回调信息类
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 // =============================================================================
@@ -46,7 +27,6 @@ public abstract class LivingEntityMixin {
     // 调用器：访问 getJumpPower() 私有方法
     // @Invoker：生成一个调用目标类私有方法的方法
     // getJumpPower() 返回生物的跳跃速度
-    // @return 跳跃力（浮点数）
     // =========================================================================
     @Invoker("getJumpPower")
     abstract float invokeGetJumpPower();
@@ -55,7 +35,6 @@ public abstract class LivingEntityMixin {
     // 修复疾跑跳跃方向方法
     // cancellable = true：允许取消原方法执行
     // jumpFromGround 是所有生物跳跃的入口点
-    // @param ci 回调信息
     // =========================================================================
     @Inject(method = "jumpFromGround", at = At.HEAD, cancellable = true)
     private void fixSprintJumpDirection(CallbackInfo ci) {
@@ -95,8 +74,8 @@ public abstract class LivingEntityMixin {
 
         // 如果没有按方向键，只做普通跳跃
         if (!w && !a && !s && !d) {
-            self.hasImpulse = true; // 标记为有冲量，防止再次触发
-            ci.cancel(); // 取消原方法（我们已经手动设置了跳跃）
+            self.hasImpulse = true;
+            ci.cancel();
             return;
         }
 
@@ -145,8 +124,6 @@ public abstract class LivingEntityMixin {
             float rad = moveYaw * (float) (Math.PI / 180.0);
 
             // 应用助推速度：0.2 格/帧的额外速度
-            // -sin(rad)：X 方向（与 MC 坐标系统一致）
-            // cos(rad)：Z 方向
             self.setDeltaMovement(self.getDeltaMovement().add(
                     -Mth.sin(rad) * 0.2,
                     0,
