@@ -1,5 +1,6 @@
 package com.aaa.combatperspective.mixin;
 
+import com.aaa.combatperspective.CombatPerspectiveClient;
 import com.aaa.combatperspective.data.CursorStore;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -52,34 +53,23 @@ public abstract class LocalPlayerMixin {
         double xNorm = Mth.clamp((mouseXpos - windowWidth / 2.0) / (windowWidth / 2.0), -1.0, 1.0);
         double yNorm = Mth.clamp((mouseYpos - windowHeight / 2.0) / (windowHeight / 2.0), -1.0, 1.0);
 
-        // 2. FOV：竖直用设定值，水平由宽高比算出
-        double fov = mc.options.fov().get().intValue();
-        double vFov = Math.toRadians(fov);
+        // 2. 用 Camera 自身的向量，不绕 yaw/pitch 角度
+        Vec3 forward = new Vec3(cam.getLookVector());
+        Vec3 worldUp = new Vec3(0, 1, 0);
+        Vec3 camRight = forward.cross(worldUp).normalize();
+        Vec3 camUp    = camRight.cross(forward).normalize();
+
+        // 3. FOV：用实际渲染值（含疾跑修饰）
+        double vFov = Math.toRadians(CombatPerspectiveClient.getCurrentFov());
         double aspect = (double) windowWidth / windowHeight;
-        double hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
-
-        // 3. 摄像机基准方向
-        float camYaw = CursorStore.getCameraYaw();  // 180°（朝北）
-        float camPitch = CursorStore.getCameraPitch();
-
-        // 4. 鼠标偏移 → 角度偏移（atan 还原透视投影的非线性映射）
-        double tanHalfH = Math.tan(hFov / 2);
+        double tanHalfH = Math.tan(2 * Math.atan(Math.tan(vFov / 2) * aspect) / 2);
         double tanHalfV = Math.tan(vFov / 2);
-        double yawOff   = Math.atan(xNorm * tanHalfH);
-        double pitchOff = Math.atan(yNorm * tanHalfV);
 
-        float rayYaw   = (float) (camYaw   + Math.toDegrees(yawOff));
-        float rayPitch = (float) (camPitch + Math.toDegrees(pitchOff));
-        rayPitch = Mth.clamp(rayPitch, -90F, 90F);
-
-        // 5. yaw/pitch → 世界方向向量
-        float yr = rayYaw   * (float) (Math.PI / 180.0);
-        float pr = rayPitch * (float) (Math.PI / 180.0);
-        Vec3 dir = new Vec3(
-                -Mth.sin(yr) * Mth.cos(pr),
-                -Mth.sin(pr),
-                 Mth.cos(yr) * Mth.cos(pr)
-        );
+        // 4. 屏幕 NDC → 相机空间方向 → 世界方向
+        Vec3 dir = forward
+                .add(camRight.scale(xNorm * tanHalfH))
+                .add(camUp.scale(-yNorm * tanHalfV))
+                .normalize();
 
         // 6. 射线：起点=摄像机世界位置，方向=dir
         Vec3 origin = cam.getPosition();

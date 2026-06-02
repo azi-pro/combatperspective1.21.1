@@ -54,12 +54,17 @@ public class CameraMixin {
         Vec3 eye = player.getEyePosition(partialTick);
         double deltacameraY = 6;
         double deltacameraZ = 6;
-        double x = eye.x;
+        double deltacameraX = 0;
+        double x = eye.x + deltacameraX;
         double y = eye.y + deltacameraY;
         double z = eye.z + deltacameraZ;
 
-        this.camerapitch = 45 ;
-        this.camerayaw = 180;
+
+        double lenXZY = Math.sqrt(deltacameraX * deltacameraX + deltacameraY * deltacameraY + deltacameraZ * deltacameraZ);
+        double lenXZ = Math.sqrt(deltacameraX * deltacameraX + deltacameraZ * deltacameraZ);
+
+        this.camerapitch = (float) Math.toDegrees(Math.asin(deltacameraY / lenXZY));
+        this.camerayaw   = (float) Math.toDegrees(Math.atan2(-deltacameraX, -deltacameraZ));
 
         // 同步到静态变量，EntityMixin 只对这个 entity 生效
         CursorStore.setCameraYaw(this.camerayaw);

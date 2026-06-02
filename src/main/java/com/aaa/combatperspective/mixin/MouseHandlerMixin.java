@@ -44,8 +44,8 @@ public class MouseHandlerMixin {
         boolean wasThirdPerson = isCameraThirdPerson(combatperspective$lastCameraType);
         boolean isNowThirdPerson = isCameraThirdPerson(current);
         // 进入第三人称后视角 → 隐藏鼠标
-        if (!wasThirdPerson && isNowThirdPerson && mc.screen == null) {
-            GLFW.glfwSetInputMode(mc.getWindow().getWindow(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+        if (!wasThirdPerson && isNowThirdPerson && mc.screen == null ) {
+        //    GLFW.glfwSetInputMode(mc.getWindow().getWindow(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
         }
         // 退出第三人称后视角 → 恢复抓取
         if (wasThirdPerson && !isNowThirdPerson) {
@@ -70,7 +70,7 @@ public class MouseHandlerMixin {
 
         boolean noScreen = mc.screen == null;
         if (isthirdPersonback && noScreen){
-            GLFW.glfwSetInputMode(mc.getWindow().getWindow(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+        //    GLFW.glfwSetInputMode(mc.getWindow().getWindow(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
         }
     }
 }
