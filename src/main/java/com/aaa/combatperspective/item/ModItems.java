@@ -1,74 +1,56 @@
+// =============================================================================
+// ModItems.java - 物品注册类
+// =============================================================================
+// 包声明
 package com.aaa.combatperspective.item;
 
+// 导入模组主类，用于获取 MOD_ID
 import com.aaa.combatperspective.CombatPerspective;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.SwordItem;
+
+// 导入基础物品类
+import net.minecraft.world.item.*;
+
+// 导入剑物品类
+
+// 导入事件总线接口
 import net.neoforged.bus.api.IEventBus;
+
+// 导入延迟物品持有者
 import net.neoforged.neoforge.registries.DeferredItem;
+
+// 导入延迟注册器
 import net.neoforged.neoforge.registries.DeferredRegister;
-import net.minecraft.tags.TagKey;
-import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.Tier;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.Block;
 
 
-// ============================================================
-enum CPWeaponTier implements Tier
-{
-    LONG_SWORD(243, 6.0F, 3.0F, 15);
-
-    private final int uses;
-    private final float speed;
-    private final float attackDamage;
-    private final int enchantmentValue;
-
-    CPWeaponTier(int uses, float speed, float attackDamage, int enchantmentValue) {
-        this.uses = uses;
-        this.speed = speed;
-        this.attackDamage = attackDamage;
-        this.enchantmentValue = enchantmentValue;
-    }
-
-    @Override public int getUses()
-            {return uses;}
-
-    @Override public float getSpeed()
-            {return speed;}
-
-    @Override public float getAttackDamageBonus()
-            {return attackDamage;}
-
-    @Override public TagKey<Block> getIncorrectBlocksForDrops()
-            {return BlockTags.INCORRECT_FOR_IRON_TOOL;}
-
-    @Override public int getEnchantmentValue()
-            {return enchantmentValue;}
-
-    @Override public Ingredient getRepairIngredient()
-            {return Ingredient.of(Items.IRON_INGOT);}
-}
-// ============================================================
-
-
-
-
+// =============================================================================
+// 物品注册类
+// 使用延迟注册模式，在游戏初始化时注册所有物品
+// =============================================================================
 public class ModItems {
+    // =========================================================================
+    // 创建延迟物品注册器
+    // DeferredRegister.createItems() 创建物品类型的延迟注册器
+    // 参数为模组 ID，用于所有注册物品的命名空间
+    // =========================================================================
     public static final DeferredRegister.Items ITEMS =
             DeferredRegister.createItems(CombatPerspective.MOD_ID);
 
-
+    // =========================================================================
+    // 注册战斗长剑
+    // 使用 CPSword 以支持高附魔值
+    // -2.4F = 攻击速度（原版铁剑是 -2.4）
+    // =========================================================================
     public static final DeferredItem<Item> Iron_LongSword = ITEMS.register("weapon/iron_longsword",
-        () -> new SwordItem(CPWeaponTier.LONG_SWORD, new Item.Properties()
-                .attributes(SwordItem.createAttributes(CPWeaponTier.LONG_SWORD, 1, -2.1F))
+        () -> new CPSword(CPTier.LONG_SWORD, new Item.Properties()
+                .attributes(SwordItem.createAttributes(CPTier.LONG_SWORD, 1, -2.4F))
                 .stacksTo(1)
         )
     );
 
-
-
-
+    // =========================================================================
+    // 注册方法：将注册器绑定到事件总线
+    // param eventBus 模组事件总线
+    // =========================================================================
     public static void register(IEventBus eventBus){
         ITEMS.register(eventBus);
     }

@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 /**
- * 玩家 Y 以上的方块渲染为 30% 不透明度。
+ * 玩家 Y 以上的方块渲染为 10% 不透明度（90% 透明）。
  * 对每个区块段，正常绘制后再用混合模式重绘一次。
  */
 @Mixin(value = LevelRenderer.class)
@@ -48,7 +48,7 @@ public class LevelRendererAlphaMixin {
         return origin;
     }
 
-    /** 截获 draw()：上方区块段 → 先正常绘制，再以 30% 不透明度混合绘制 */
+    /** 截获 draw()：上方区块段 → 先正常绘制，再以 10% 不透明度混合绘制 */
     @Redirect(
             method = "renderSectionLayer",
             at = @At(
@@ -71,14 +71,14 @@ public class LevelRendererAlphaMixin {
             RenderSystem.depthMask(false);
             RenderSystem.enableBlend();
 
-            // 不依赖着色器 ColorModulator，用 OpenGL 常量混合
-            org.lwjgl.opengl.GL14.glBlendColor(1.0F, 1.0F, 1.0F, 0.3F);
+            // 0.1F = 10% 不透明度（90% 透明）
+            org.lwjgl.opengl.GL14.glBlendColor(1.0F, 1.0F, 1.0F, 0.1F);
             RenderSystem.blendFunc(
                     org.lwjgl.opengl.GL14.GL_CONSTANT_ALPHA,
                     org.lwjgl.opengl.GL14.GL_ONE_MINUS_CONSTANT_ALPHA
             );
 
-            buffer.draw(); // 第二次绘制 → 30% 不透明度
+            buffer.draw(); // 第二次绘制 → 10% 不透明度
 
             RenderSystem.disableBlend();
             RenderSystem.depthMask(true);
