@@ -432,7 +432,7 @@ public class CombatPerspectiveClient {
     }
 
     private static void addVertex(VertexConsumer buf, Matrix4f mat, float x, float y, float z, int color, float nx, float ny, float nz) {
-        buf.addVertex(mat, x, y, z).setColor(color).setNormal(nx, ny, nz);
+        buf.addVertex(mat, x, y, z).setColor(color).setNormal(nx, ny, nz).setUv(0, 0).setUv2(240, 240);
     }
 
     // =========================================================================
@@ -468,18 +468,14 @@ public class CombatPerspectiveClient {
         // setNormal：设置法线（用于光照计算）
         // -------------------------------------------------------------------------
         buf.addVertex(mat, (float)(-right.x * s), (float)(-right.y * s), (float)(-right.z * s))
-                .setColor(color).setNormal(0, 1, 0);
+                .setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
         buf.addVertex(mat, (float)( right.x * s), (float)( right.y * s), (float)( right.z * s))
-                .setColor(color).setNormal(0, 1, 0);
+                .setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
 
-        // -------------------------------------------------------------------------
-        // 绘制竖直线
-        // 从上到下的线段
-        // -------------------------------------------------------------------------
         buf.addVertex(mat, (float)(-up.x * s), (float)(-up.y * s), (float)(-up.z * s))
-                .setColor(color).setNormal(0, 1, 0);
+                .setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
         buf.addVertex(mat, (float)( up.x * s), (float)( up.y * s), (float)( up.z * s))
-                .setColor(color).setNormal(0, 1, 0);
+                .setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
     }
 
     // =========================================================================
@@ -504,11 +500,11 @@ public class CombatPerspectiveClient {
 
         // 绘制四条边（四个角到四个角）
         // LINE_STRIP 模式：每个新顶点与前一个顶点形成线段
-        buf.addVertex(mat, c[0], c[1], c[2]).setColor(color).setNormal(0, 1, 0); // 左下
-        buf.addVertex(mat, c[3], c[4], c[5]).setColor(color).setNormal(0, 1, 0); // 右下
-        buf.addVertex(mat, c[6], c[7], c[8]).setColor(color).setNormal(0, 1, 0); // 右上
-        buf.addVertex(mat, c[9], c[10], c[11]).setColor(color).setNormal(0, 1, 0); // 左上
-        buf.addVertex(mat, c[0], c[1], c[2]).setColor(color).setNormal(0, 1, 0); // 回到起点闭合
+        buf.addVertex(mat, c[0], c[1], c[2]).setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+        buf.addVertex(mat, c[3], c[4], c[5]).setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+        buf.addVertex(mat, c[6], c[7], c[8]).setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+        buf.addVertex(mat, c[9], c[10], c[11]).setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+        buf.addVertex(mat, c[0], c[1], c[2]).setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
     }
 
     // =========================================================================
@@ -579,10 +575,8 @@ public class CombatPerspectiveClient {
     // =========================================================================
     private static void line(VertexConsumer buf, Matrix4f mat,
                              float x1, float y1, float z1, float x2, float y2, float z2, int color) {
-        // 添加线段起点
-        buf.addVertex(mat, x1, y1, z1).setColor(color).setNormal(0, 1, 0);
-        // 添加线段终点
-        buf.addVertex(mat, x2, y2, z2).setColor(color).setNormal(0, 1, 0);
+        buf.addVertex(mat, x1, y1, z1).setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+        buf.addVertex(mat, x2, y2, z2).setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
     }
 
     // =========================================================================

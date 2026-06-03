@@ -125,10 +125,14 @@ public abstract class LocalPlayerMixin {
             return;
         }
 
-        double moveX = (a ? -1 : 0) + (d ? 1 : 0);
-        double moveZ = (w ? -1 : 0) + (s ? 1 : 0);
+        // 按键 → 世界方向（与 EntityMixin 的 moveRelative 一致，都用 cameraYaw）
+        float forwardImp = (w ? 1 : 0) + (s ? -1 : 0);
+        float leftImp    = (a ? 1 : 0) + (d ? -1 : 0);
+        float yr = CursorStore.getCameraYaw() * (float) (Math.PI / 180.0);
+        double worldX = leftImp * Math.cos(yr) - forwardImp * Math.sin(yr);
+        double worldZ = forwardImp * Math.cos(yr) + leftImp * Math.sin(yr);
 
-        float moveYaw = (float) Math.toDegrees(Math.atan2(-moveX, moveZ));
+        float moveYaw = (float) Math.toDegrees(Math.atan2(-worldX, worldZ));
         if (moveYaw < 0) moveYaw += 360;
 
         float playerYaw = self.getYRot() % 360;

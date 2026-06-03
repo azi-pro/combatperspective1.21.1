@@ -17,12 +17,13 @@ public class MouseHandlerMixin {
 
     @Unique
     private CameraType combatperspective$lastCameraType = CameraType.FIRST_PERSON;
-    @Inject(method = "grabMouse()V", at = @At("HEAD"), cancellable = true)
-    private void preventGrabInThirdPerson(CallbackInfo ci) {
+
+    /** grabMouse 后：默认保持 DISABLED，仅调整时覆盖 HIDDEN */
+    @Inject(method = "grabMouse()V", at = @At("TAIL"))
+    private void overrideGrabInThirdPerson(CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
-        // 仅拦截：第三人称后视角 + 无 GUI 打开
-        if (isthirdPersonback(mc) && mc.screen == null) {
-            ci.cancel();
+        if (isthirdPersonback(mc) && mc.screen == null && isAdjustKeyHeld()) {
+            GLFW.glfwSetInputMode(mc.getWindow().getWindow(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
         }
     }
     @Unique
@@ -45,9 +46,9 @@ public class MouseHandlerMixin {
         }
         boolean wasThirdPerson = isCameraThirdPerson(combatperspective$lastCameraType);
         boolean isNowThirdPerson = isCameraThirdPerson(current);
-        // 进入第三人称后视角 → 隐藏鼠标
-        if (!wasThirdPerson && isNowThirdPerson && mc.screen == null ) {
-        //    GLFW.glfwSetInputMode(mc.getWindow().getWindow(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+        // 进入第三人称 → 默认锁定鼠标
+        if (!wasThirdPerson && isNowThirdPerson && mc.screen == null) {
+            mc.mouseHandler.grabMouse();
         }
         // 退出第三人称后视角 → 恢复抓取
         if (wasThirdPerson && !isNowThirdPerson) {
@@ -65,14 +66,20 @@ public class MouseHandlerMixin {
         }
     }
     @Inject(method = "handleAccumulatedMovement()V", at = @At("HEAD"))
-    private void releaseMouseInThirdPerson(CallbackInfo ci) {
+    private void manageCursorInThirdPerson(CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
-        boolean isthirdPersonback = !mc.options.getCameraType().isFirstPerson()
-                && !mc.options.getCameraType().isMirrored();
+        if (!isthirdPersonback(mc) || mc.screen != null) return;
 
-        boolean noScreen = mc.screen == null;
-        if (isthirdPersonback && noScreen){
-        //    GLFW.glfwSetInputMode(mc.getWindow().getWindow(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+        long win = mc.getWindow().getWindow();
+        if (isAdjustKeyHeld()) {
+            GLFW.glfwSetInputMode(win, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+        } else {
+            // 松开调整键 → 重新锁定，重置差值标记
+            if (GLFW.glfwGetInputMode(win, GLFW.GLFW_CURSOR) != GLFW.GLFW_CURSOR_DISABLED) {
+                mc.mouseHandler.grabMouse();
+                cpLastX = Double.NaN;
+                cpLastY = Double.NaN;
+            }
         }
     }
 
@@ -88,10 +95,14 @@ public class MouseHandlerMixin {
     private void adjustCameraOnMove(long window, double xpos, double ypos, CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
         if (!isthirdPersonback(mc) || mc.screen != null) return;
-        if (!isAdjustKeyHeld(window)) return;
+        if (!isAdjustKeyHeld()) return;
 
-        // 首次 → 记初始位置
-        if (Double.isNaN(cpLastX)) { cpLastX = xpos; cpLastY = ypos; return; }
+        // 首次 → 直接记录当前位置
+        if (Double.isNaN(cpLastX)) {
+            cpLastX = xpos;
+            cpLastY = ypos;
+            return;
+        }
 
         double dx = xpos - cpLastX;
         double dy = ypos - cpLastY;
@@ -114,7 +125,7 @@ public class MouseHandlerMixin {
     private void adjustCameraOnScroll(long window, double scrollX, double scrollY, CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
         if (!isthirdPersonback(mc) || mc.screen != null) return;
-        if (!isAdjustKeyHeld(window)) return;
+        if (!isAdjustKeyHeld()) return;
 
         double dist = CursorStore.getCameraSphDist() - scrollY * 0.2;
         CursorStore.setCameraSphDist(dist);
@@ -122,8 +133,7 @@ public class MouseHandlerMixin {
         ci.cancel();
     }
 
-    /** Left Alt 是否按下 */
-    private static boolean isAdjustKeyHeld(long window) {
+    private static boolean isAdjustKeyHeld() {
         return com.aaa.combatperspective.CombatPerspectiveClient.ADJUST_CAMERA_KEY.isDown();
     }
 }

@@ -51,7 +51,7 @@ public class CameraMixin {
         double dz = CursorStore.getDeltaCameraZ();
 
         double len = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        float yaw   = (float) Math.toDegrees(Math.atan2(-dx, -dz));
+        float yaw   = (float) Math.toDegrees(Math.atan2(dx, -dz));
         float pitch = (float) Math.toDegrees(Math.asin(dy / len));
 
         CursorStore.setCameraYaw(yaw);
