@@ -54,6 +54,7 @@ import net.minecraft.world.phys.HitResult;
 
 // 导入三维向量类，用于表示位置和方向
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.block.state.BlockState;
 
 // 导入分布标记注解，用于区分客户端/服务端代码
 import net.neoforged.api.distmarker.Dist;
@@ -212,6 +213,13 @@ public class CombatPerspectiveClient {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
+        // ---- 第三人称头顶方块透明 ----
+        if (isThirdPersonBack(mc)) {
+            var poseStack = event.getPoseStack();
+            var bufferSource = mc.renderBuffers().bufferSource();
+            renderTransparentBlockAbovePlayer(mc, event, bufferSource);
+        }
+
         // 获取主相机，用于计算相对坐标
         Camera cam = mc.gameRenderer.getMainCamera();
 
@@ -338,6 +346,93 @@ public class CombatPerspectiveClient {
 
         // 重新启用深度测试，恢复正常渲染
         RenderSystem.enableDepthTest();
+    }
+
+
+    // =========================================================================
+    // 第三人称头顶方块透明
+    // =========================================================================
+    
+    private static boolean isThirdPersonBack(Minecraft mc) {
+        return !mc.options.getCameraType().isFirstPerson()
+                && !mc.options.getCameraType().isMirrored();
+    }
+
+    /**
+     * 渲染玩家头顶方块的半透明覆盖层
+     */
+    private static void renderTransparentBlockAbovePlayer(Minecraft mc, RenderLevelStageEvent event, MultiBufferSource.BufferSource bufferSource) {
+        if (mc.player == null || mc.level == null) return;
+
+        LocalPlayer player = mc.player;
+        
+        // 玩家头顶方块位置
+        BlockPos headPos = BlockPos.containing(player.position()).above();
+        BlockState state = mc.level.getBlockState(headPos);
+
+        // 跳过空气
+        if (state.isAir()) return;
+
+        Camera cam = mc.gameRenderer.getMainCamera();
+        var poseStack = event.getPoseStack();
+        Vec3 camPos = cam.getPosition();
+
+        poseStack.pushPose();
+        poseStack.translate(headPos.getX() - camPos.x, headPos.getY() - camPos.y, headPos.getZ() - camPos.z);
+
+        Matrix4f mat = poseStack.last().pose();
+
+        // 使用半透明渲染类型
+        VertexConsumer buf = bufferSource.getBuffer(RenderType.translucent());
+
+        // 15% 不透明度
+        int alpha = (int)(255 * 0.15f);
+        int color = (alpha << 24) | 0xFFFFFF;
+
+        // 绘制 6 个面
+        // 顶面 (Y+)
+        addVertex(buf, mat, 0, 1, 0, color, 0, 1, 0);
+        addVertex(buf, mat, 1, 1, 0, color, 0, 1, 0);
+        addVertex(buf, mat, 1, 1, 1, color, 0, 1, 0);
+        addVertex(buf, mat, 0, 1, 1, color, 0, 1, 0);
+
+        // 底面 (Y-)
+        addVertex(buf, mat, 0, 0, 1, color, 0, -1, 0);
+        addVertex(buf, mat, 1, 0, 1, color, 0, -1, 0);
+        addVertex(buf, mat, 1, 0, 0, color, 0, -1, 0);
+        addVertex(buf, mat, 0, 0, 0, color, 0, -1, 0);
+
+        // 北面 (Z-)
+        addVertex(buf, mat, 1, 0, 0, color, 0, 0, -1);
+        addVertex(buf, mat, 0, 0, 0, color, 0, 0, -1);
+        addVertex(buf, mat, 0, 1, 0, color, 0, 0, -1);
+        addVertex(buf, mat, 1, 1, 0, color, 0, 0, -1);
+
+        // 南面 (Z+)
+        addVertex(buf, mat, 0, 0, 1, color, 0, 0, 1);
+        addVertex(buf, mat, 1, 0, 1, color, 0, 0, 1);
+        addVertex(buf, mat, 1, 1, 1, color, 0, 0, 1);
+        addVertex(buf, mat, 0, 1, 1, color, 0, 0, 1);
+
+        // 西面 (X-)
+        addVertex(buf, mat, 0, 0, 0, color, -1, 0, 0);
+        addVertex(buf, mat, 0, 0, 1, color, -1, 0, 0);
+        addVertex(buf, mat, 0, 1, 1, color, -1, 0, 0);
+        addVertex(buf, mat, 0, 1, 0, color, -1, 0, 0);
+
+        // 东面 (X+)
+        addVertex(buf, mat, 1, 0, 1, color, 1, 0, 0);
+        addVertex(buf, mat, 1, 0, 0, color, 1, 0, 0);
+        addVertex(buf, mat, 1, 1, 0, color, 1, 0, 0);
+        addVertex(buf, mat, 1, 1, 1, color, 1, 0, 0);
+
+        bufferSource.endBatch(RenderType.translucent());
+
+        poseStack.popPose();
+    }
+
+    private static void addVertex(VertexConsumer buf, Matrix4f mat, float x, float y, float z, int color, float nx, float ny, float nz) {
+        buf.addVertex(mat, x, y, z).setColor(color).setNormal(nx, ny, nz);
     }
 
     // =========================================================================

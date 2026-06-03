@@ -21,7 +21,6 @@
     "MouseHandlerMixin"
   ],
   "client": [
-    "LevelRendererAlphaMixin",
     "LivingEntityMixin"
   ],
   "injectors": {
