@@ -2,7 +2,6 @@ package com.aaa.combatperspective.mixin;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexBuffer;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -12,15 +11,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * 第三人称后视角下，玩家头顶的方块渲染为半透明（可从相机看到角色）。
- * 
- * 实现方式：检测渲染的区块段是否包含玩家头顶方块，
- * 如果是则将该区块段渲染为 15% 不透明度。
  */
 @Mixin(value = LevelRenderer.class)
 public class LevelRendererAlphaMixin {
@@ -76,7 +70,7 @@ public class LevelRendererAlphaMixin {
         if (!isThirdPersonBack(mc)) return false;
 
         Player player = mc.player;
-        // 区块段是 16 格高，头顶方块的 Y 坐标
+        // 头顶方块的 Y 坐标（玩家 Y + 1）
         int headBlockY = (int) Math.floor(player.getY()) + 1;
 
         // 检查区块段是否包含头顶方块
@@ -85,9 +79,9 @@ public class LevelRendererAlphaMixin {
     }
 
     private boolean isThirdPersonBack(Minecraft mc) {
+        // 只要是第三人称后视角就启用，不检查 screen
         return !mc.options.getCameraType().isFirstPerson()
-                && !mc.options.getCameraType().isMirrored()
-                && mc.screen == null;
+                && !mc.options.getCameraType().isMirrored();
     }
 
     private void applyAlphaBlend(VertexBuffer buffer) {
