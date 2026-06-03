@@ -2,18 +2,19 @@ package com.aaa.combatperspective.mixin;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexBuffer;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.chunk.SectionRenderDispatcher;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 /**
- * 玩家 Y 以上的方块渲染为 10% 不透明度（90% 透明）。
- * 对每个区块段，正常绘制后再用混合模式重绘一次。
+ * 第三人称后视角下，玩家头顶的方块渲染为半透明（可从相机看到角色）。
  */
 @Mixin(value = LevelRenderer.class)
 public class LevelRendererAlphaMixin {
@@ -21,26 +22,18 @@ public class LevelRendererAlphaMixin {
     private static int currentOriginY = Integer.MIN_VALUE;
     private static RenderType currentRenderType;
 
-    /** 记录当前渲染层 */
     @Redirect(
             method = "renderSectionLayer",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/RenderType;setupRenderState()V"
-            )
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/RenderType;setupRenderState()V")
     )
     private void captureRenderType(RenderType type) {
         currentRenderType = type;
         type.setupRenderState();
     }
 
-    /** 截获 getOrigin()，记录当前区块段的 Y 坐标 */
     @Redirect(
             method = "renderSectionLayer",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/chunk/SectionRenderDispatcher$RenderSection;getOrigin()Lnet/minecraft/core/BlockPos;"
-            )
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/SectionRenderDispatcher$RenderSection;getOrigin()Lnet/minecraft/core/BlockPos;")
     )
     private BlockPos captureOrigin(SectionRenderDispatcher.RenderSection section) {
         BlockPos origin = section.getOrigin();
@@ -48,13 +41,9 @@ public class LevelRendererAlphaMixin {
         return origin;
     }
 
-    /** 截获 draw()：上方区块段 → 先正常绘制，再以 10% 不透明度混合绘制 */
     @Redirect(
             method = "renderSectionLayer",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lcom/mojang/blaze3d/vertex/VertexBuffer;draw()V"
-            )
+            at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/VertexBuffer;draw()V")
     )
     private void drawWithAlpha(VertexBuffer buffer) {
         Minecraft mc = Minecraft.getInstance();
@@ -62,26 +51,54 @@ public class LevelRendererAlphaMixin {
         // 正常绘制
         buffer.draw();
 
-        // 玩家 Y 以上的 solid/cutout 区块段 → 半透明叠层
-        if (mc.player != null
-                && currentOriginY > mc.player.getY()
-                && currentRenderType != RenderType.translucent()
-                && currentRenderType != RenderType.tripwire()) {
-
-            RenderSystem.depthMask(false);
-            RenderSystem.enableBlend();
-
-            // 0.1F = 10% 不透明度（90% 透明）
-            org.lwjgl.opengl.GL14.glBlendColor(1.0F, 1.0F, 1.0F, 0.1F);
-            RenderSystem.blendFunc(
-                    org.lwjgl.opengl.GL14.GL_CONSTANT_ALPHA,
-                    org.lwjgl.opengl.GL14.GL_ONE_MINUS_CONSTANT_ALPHA
-            );
-
-            buffer.draw(); // 第二次绘制 → 10% 不透明度
-
-            RenderSystem.disableBlend();
-            RenderSystem.depthMask(true);
+        // 检查是否需要半透明处理
+        if (!shouldApplyAlpha(mc, currentOriginY)) {
+            return;
         }
+
+        // 跳过透明渲染层
+        if (currentRenderType == RenderType.translucent() || currentRenderType == RenderType.tripwire()) {
+            return;
+        }
+
+        // 应用半透明
+        applyAlphaBlend(buffer);
+    }
+
+    private boolean shouldApplyAlpha(Minecraft mc, int originY) {
+        if (mc.player == null) return false;
+        if (!isThirdPersonBack(mc)) return false;
+
+        Player player = mc.player;
+        // 头顶方块的 Y 坐标（玩家 Y + 1）
+        int headBlockY = (int) Math.floor(player.getY()) + 1;
+
+        // 检查区块段是否包含头顶方块
+        // 区块段范围: [originY, originY + 16)
+        return originY <= headBlockY && headBlockY < originY + 16;
+    }
+
+    private boolean isThirdPersonBack(Minecraft mc) {
+        // 只要是第三人称后视角就启用，不检查 screen
+        return !mc.options.getCameraType().isFirstPerson()
+                && !mc.options.getCameraType().isMirrored();
+    }
+
+    private void applyAlphaBlend(VertexBuffer buffer) {
+        RenderSystem.depthMask(false);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+
+        // 0.15F = 15% 不透明度（85% 透明）
+        org.lwjgl.opengl.GL14.glBlendColor(1.0F, 1.0F, 1.0F, 0.15F);
+        RenderSystem.blendFunc(
+                org.lwjgl.opengl.GL14.GL_CONSTANT_ALPHA,
+                org.lwjgl.opengl.GL14.GL_ONE_MINUS_CONSTANT_ALPHA
+        );
+
+        buffer.draw();
+
+        RenderSystem.disableBlend();
+        RenderSystem.depthMask(true);
     }
 }
