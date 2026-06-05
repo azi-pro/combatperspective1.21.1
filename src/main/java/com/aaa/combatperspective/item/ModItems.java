@@ -38,11 +38,11 @@ public class ModItems {
     // =========================================================================
     // 注册战斗长剑
     // 使用 CPSword 以支持高附魔值
-    // -2.4F = 攻击速度（原版铁剑是 -2.4）
+    // -2.1F = 攻击速度（原版铁剑是 -2.1）
     // =========================================================================
     public static final DeferredItem<Item> Iron_LongSword = ITEMS.register("weapon/iron_longsword",
         () -> new CPSword(CPTier.LONG_SWORD, new Item.Properties()
-                .attributes(SwordItem.createAttributes(CPTier.LONG_SWORD, 1, -2.4F))
+                .attributes(SwordItem.createAttributes(CPTier.LONG_SWORD, 1, -2.1F))
                 .stacksTo(1)
         )
     );

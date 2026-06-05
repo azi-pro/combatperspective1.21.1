@@ -75,22 +75,46 @@ public abstract class LocalPlayerMixin {
         Vec3 origin = cam.getPosition();
         Vec3 end = origin.add(dir.scale(256.0));
 
+        // 方块检测
         ClipContext ctx = new ClipContext(
                 origin, end,
                 ClipContext.Block.OUTLINE,
                 ClipContext.Fluid.NONE,
                 self
         );
-        HitResult hit = self.level().clip(ctx);
-        boolean isBlock = hit.getType() == HitResult.Type.BLOCK;
+        HitResult blockHit = self.level().clip(ctx);
+        boolean isBlock = blockHit.getType() == HitResult.Type.BLOCK;
 
-        Vec3 target = isBlock ? hit.getLocation() : end;
+        // 实体检测
+        net.minecraft.world.phys.AABB sweepBox =
+                self.getBoundingBox().expandTowards(dir.scale(256.0)).inflate(1.0);
+        net.minecraft.world.phys.EntityHitResult entityHit =
+                net.minecraft.world.entity.projectile.ProjectileUtil.getEntityHitResult(
+                        self.level(), self, origin, end, sweepBox,
+                        e -> !e.isSpectator() && e.isPickable());
+
+        // 比较距离，取最近的
+        double blockDist = isBlock
+                ? origin.distanceToSqr(blockHit.getLocation()) : Double.MAX_VALUE;
+        double entityDist = entityHit != null
+                ? origin.distanceToSqr(entityHit.getLocation()) : Double.MAX_VALUE;
+
+        Vec3 target;
+        if (entityDist < blockDist && entityHit != null) {
+            target = entityHit.getEntity().getBoundingBox().getCenter();
+        } else if (isBlock) {
+            target = ((net.minecraft.world.phys.BlockHitResult) blockHit).getLocation();
+        } else {
+            target = end;
+        }
 
         // 导出命中信息供渲染使用
         CursorStore.setHit(target,
-                isBlock ? ((net.minecraft.world.phys.BlockHitResult) hit).getDirection() : null,
-                isBlock ? ((net.minecraft.world.phys.BlockHitResult) hit).getBlockPos() : null,
-                isBlock);
+                isBlock && blockDist < entityDist
+                        ? ((net.minecraft.world.phys.BlockHitResult) blockHit).getDirection() : null,
+                isBlock && blockDist < entityDist
+                        ? ((net.minecraft.world.phys.BlockHitResult) blockHit).getBlockPos() : null,
+                isBlock && blockDist < entityDist);
 
         // 7. 玩家看向目标
         self.lookAt(EntityAnchorArgument.Anchor.EYES, target);
