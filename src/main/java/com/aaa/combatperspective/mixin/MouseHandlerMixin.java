@@ -18,12 +18,31 @@ public class MouseHandlerMixin {
     @Unique
     private CameraType combatperspective$lastCameraType = CameraType.FIRST_PERSON;
 
-    /** grabMouse 后：第三人称始终覆盖为 HIDDEN */
+    /** grabMouse 后：第三人称覆盖为 HIDDEN + 边界钳制 */
     @Inject(method = "grabMouse()V", at = @At("TAIL"))
     private void overrideGrabInThirdPerson(CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
+
+
+        long win = mc.getWindow().getWindow();
+        clampCursor(win, mc.getWindow().getWidth(), mc.getWindow().getHeight());
         if (isthirdPersonback(mc) && mc.screen == null) {
-            GLFW.glfwSetInputMode(mc.getWindow().getWindow(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+            GLFW.glfwSetInputMode(win, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+        }
+        else {
+            GLFW.glfwSetInputMode(win, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
+        }
+
+    }
+
+    @Unique
+    private static void clampCursor(long window, int w, int h) {
+        double[] mx = new double[2];
+        GLFW.glfwGetCursorPos(window, mx, mx);
+        double cx = Mth.clamp(mx[0], 0, w - 1);
+        double cy = Mth.clamp(mx[1], 0, h - 1);
+        if (cx != mx[0] || cy != mx[1]) {
+            GLFW.glfwSetCursorPos(window, cx, cy);
         }
     }
     @Unique
@@ -40,20 +59,22 @@ public class MouseHandlerMixin {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options == null) return;
         CameraType current = mc.options.getCameraType();
-        if (current == combatperspective$lastCameraType) return;
-
-        combatperspective$lastCameraType = current;
-        if (mc.screen != null) return;
-
-        long win = mc.getWindow().getWindow();
-        if (isCameraThirdPerson(current)) {
-            // 进入第三人称 → HIDDEN（隐藏，有边界，可移动）
-            GLFW.glfwSetInputMode(win, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
-            cpLastX = Double.NaN;
-        } else {
-            // 退出第三人称 → 抓取（DISABLED，无边界，锁定）
+        // 视角未变化，直接返回（零开销快速路径）
+        if (current == combatperspective$lastCameraType) {
+            return;
+        }
+        boolean wasThirdPerson = isCameraThirdPerson(combatperspective$lastCameraType);
+        boolean isNowThirdPerson = isCameraThirdPerson(current);
+        // 进入第三人称 → 默认锁定鼠标
+        if (!wasThirdPerson && isNowThirdPerson && mc.screen == null) {
             mc.mouseHandler.grabMouse();
         }
+        // 退出第三人称后视角 → 恢复抓取
+        if (wasThirdPerson && !isNowThirdPerson) {
+            mc.mouseHandler.grabMouse();
+        }
+        combatperspective$lastCameraType = current;
+
     }
 
     @Inject(method = "turnPlayer(D)V", at = @At("HEAD"), cancellable = true)
@@ -61,6 +82,24 @@ public class MouseHandlerMixin {
         Minecraft mc = Minecraft.getInstance();
         if (isthirdPersonback(mc) && mc.screen == null) {
             ci.cancel();
+        }
+    }
+    @Inject(method = "handleAccumulatedMovement()V", at = @At("HEAD"))
+    private void manageCursorInThirdPerson(CallbackInfo ci) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!isthirdPersonback(mc) || mc.screen != null) return;
+
+        long win = mc.getWindow().getWindow();
+        if (isAdjustKeyHeld()) {
+            GLFW.glfwSetInputMode(win, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+            clampCursor(win, mc.getWindow().getWidth(), mc.getWindow().getHeight());
+        } else {
+            // 松开调整键 → 重新锁定，重置差值标记
+            if (GLFW.glfwGetInputMode(win, GLFW.GLFW_CURSOR) != GLFW.GLFW_CURSOR_DISABLED) {
+                mc.mouseHandler.grabMouse();
+                cpLastX = Double.NaN;
+                cpLastY = Double.NaN;
+            }
         }
     }
 

@@ -21,15 +21,12 @@ public abstract class GuiMixin {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options == null || mc.player == null) return;
 
-        boolean thirdPerson = !mc.options.getCameraType().isFirstPerson()
+        boolean isthirdPersonback = !mc.options.getCameraType().isFirstPerson()
                 && !mc.options.getCameraType().isMirrored();
 
-        System.out.println("GuiMixin render TAIL: thirdPerson=" + thirdPerson + " screen=" + (mc.screen != null) + " hideGui=" + mc.options.hideGui);
-        if (thirdPerson && mc.screen == null && !mc.options.hideGui) {
-            System.out.println("DRAWING CROSSHAIR");
+        if (isthirdPersonback && mc.screen == null && !mc.options.hideGui) {
             double[] mx = new double[1], my = new double[1];
             org.lwjgl.glfw.GLFW.glfwGetCursorPos(mc.getWindow().getWindow(), mx, my);
-            System.out.println("  cursor=(" + mx[0] + "," + my[0] + ") win=" + mc.getWindow().getWidth() + "x" + mc.getWindow().getHeight());
             RenderSystem.enableBlend();
             RenderSystem.blendFuncSeparate(
                     com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE_MINUS_DST_COLOR,
@@ -41,7 +38,6 @@ public abstract class GuiMixin {
             double guiScale = mc.getWindow().getGuiScale();
             int cx = (int) (mx[0] / guiScale) - size / 2;
             int cy = (int) (my[0] / guiScale) - size / 2;
-            System.out.println("  blitSprite at (" + cx + "," + cy + ")");
             graphics.blitSprite(CROSSHAIR, cx, cy, size, size);
         }
     }
