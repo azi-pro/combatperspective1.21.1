@@ -65,10 +65,25 @@ public class Config {
             .comment("摄像机左右偏移 (deltaX)")
             .defineInRange("cameraDeltaX", 0.0D, -10.0D, 128.0D);
 
+    // FOV 方案选择：0=方案一（锁定FOV），1=方案二（仅去疾跑）
+    public static final ModConfigSpec.IntValue FOV_MODE = BUILDER
+            .comment("疾跑FOV处理: 0=方案一(锁FOV), 1=方案二(仅去疾跑扩视场角)")
+            .defineInRange("fovMode", 1, 0, 1);
+
     // 是否启用边缘旋转
     public static final ModConfigSpec.BooleanValue EDGE_ROTATE_ENABLED = BUILDER
             .comment("鼠标移到屏幕边缘时自动旋转摄像机")
             .define("edgeRotateEnabled", true);
+
+    // 水平边缘触发比例（0.01~0.50）
+    public static final ModConfigSpec.DoubleValue EDGE_MARGIN_X = BUILDER
+            .comment("水平边缘触发比例")
+            .defineInRange("edgeMarginX", 0.10D, 0.01D, 0.50D);
+
+    // 竖直边缘触发比例（0.01~0.50）
+    public static final ModConfigSpec.DoubleValue EDGE_MARGIN_Y = BUILDER
+            .comment("竖直边缘触发比例")
+            .defineInRange("edgeMarginY", 0.10D, 0.01D, 0.50D);
 
     // 水平旋转速度（度/秒）
     public static final ModConfigSpec.DoubleValue CAMERA_YAW_SPEED = BUILDER
@@ -123,7 +138,10 @@ public class Config {
             CursorStore.setDeltaCameraX(CAMERA_DELTA_X.get());
             CursorStore.setDeltaCameraY(CAMERA_DELTA_Y.get());
             CursorStore.setDeltaCameraZ(CAMERA_DELTA_Z.get());
+            CursorStore.setFovMode(FOV_MODE.get());
             CursorStore.setEdgeRotateEnabled(EDGE_ROTATE_ENABLED.get());
+            CursorStore.setEdgeMarginX(EDGE_MARGIN_X.get());
+            CursorStore.setEdgeMarginY(EDGE_MARGIN_Y.get());
             CursorStore.setYawSpeed(CAMERA_YAW_SPEED.get());
             CursorStore.setPitchSpeed(CAMERA_PITCH_SPEED.get());
         }

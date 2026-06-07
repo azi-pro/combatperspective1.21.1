@@ -209,13 +209,25 @@ public class CursorStore {
     private static double deltaCameraY = 6;
     private static double deltaCameraZ = 6;
 
+    // FOV 方案
+    private static int fovMode = 1; // 0=方案一(锁FOV), 1=方案二(仅去疾跑)
+
+    public static int getFovMode() { return fovMode; }
+    public static void setFovMode(int v) { fovMode = v; }
+
     // 边缘旋转配置
     private static boolean edgeRotateEnabled = true;
+    private static double edgeMarginX = 0.10;  // 水平边缘比例
+    private static double edgeMarginY = 0.10;  // 竖直边缘比例
     private static double yawSpeed = 2.0;
     private static double pitchSpeed = 2.0;
 
     public static boolean isEdgeRotateEnabled() { return edgeRotateEnabled; }
     public static void setEdgeRotateEnabled(boolean v) { edgeRotateEnabled = v; }
+    public static double getEdgeMarginX() { return edgeMarginX; }
+    public static double getEdgeMarginY() { return edgeMarginY; }
+    public static void setEdgeMarginX(double v) { edgeMarginX = v; }
+    public static void setEdgeMarginY(double v) { edgeMarginY = v; }
     public static double getYawSpeed()   { return yawSpeed; }
     public static double getPitchSpeed() { return pitchSpeed; }
     public static void setYawSpeed(double v)   { yawSpeed = v; }

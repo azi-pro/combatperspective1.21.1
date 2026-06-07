@@ -45,33 +45,34 @@ public abstract class LocalPlayerMixin {
         int w = mc.getWindow().getWidth();
         int h = mc.getWindow().getHeight();
 
-        double marginPx = w * 0.10; // 10% 边缘像素宽度（取宽度为准）
+        double marginX = w * CursorStore.getEdgeMarginX();
+        double marginY = h * CursorStore.getEdgeMarginY();
 
         double yawBase   = CursorStore.getYawSpeed()   / 20; // 度/tick
         double pitchBase = CursorStore.getPitchSpeed() / 20;
 
         // 左边缘：越靠近左边越快
-        if (mx < marginPx) {
-            int zone = (int)((1 - mx / marginPx) * 5); // 0~4
+        if (mx < marginX) {
+            int zone = (int)((1 - mx / marginX) * 5); // 0~4
             double mult = Math.pow(2, zone);
             CursorStore.setCameraSphYaw(CursorStore.getCameraSphYaw() + yawBase * mult);
         }
         // 右边缘
-        if (mx > w - marginPx) {
-            int zone = (int)(((mx - (w - marginPx)) / marginPx) * 5);
+        if (mx > w - marginX) {
+            int zone = (int)(((mx - (w - marginX)) / marginX) * 5);
             double mult = Math.pow(2, zone);
             CursorStore.setCameraSphYaw(CursorStore.getCameraSphYaw() - yawBase * mult);
         }
         // 上边缘 → 摄像头降低（pitch 减小）
-        if (my < marginPx) {
-            int zone = (int)((1 - my / marginPx) * 5);
+        if (my < marginY) {
+            int zone = (int)((1 - my / marginY) * 5);
             double mult = Math.pow(2, zone);
             CursorStore.setCameraSphPitch(
                     Mth.clamp(CursorStore.getCameraSphPitch() - pitchBase * mult, -89, 89));
         }
         // 下边缘 → 摄像头升高（pitch 增大）
-        if (my > h - marginPx) {
-            int zone = (int)(((my - (h - marginPx)) / marginPx) * 5);
+        if (my > h - marginY) {
+            int zone = (int)(((my - (h - marginY)) / marginY) * 5);
             double mult = Math.pow(2, zone);
             CursorStore.setCameraSphPitch(
                     Mth.clamp(CursorStore.getCameraSphPitch() + pitchBase * mult, -89, 89));

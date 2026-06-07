@@ -1,27 +1,41 @@
 package com.aaa.combatperspective.mixin;
 
-import net.minecraft.client.Camera;
+import com.aaa.combatperspective.data.CursorStore;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.GameRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(GameRenderer.class)
 public class GameRendererMixin {
 
-    /** 第三人称下锁定基础 FOV，禁用疾跑/药水等一切 FOV 变化 */
-    @Inject(method = "getFov", at = @At("RETURN"), cancellable = true)
-    private void lockFovInThirdPerson(Camera camera, float partialTick, boolean useFovSetting,
-                                       CallbackInfoReturnable<Double> cir) {
+    /**
+     * 方案二：疾跑时暂时摘下 sprint 标签，算完 FOV 修正再戴回去。
+     * 只去掉疾跑对 FOV 的影响，保留药水/飞行等一切其他效果。
+     */
+    @Redirect(
+            method = "tickFov",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/player/AbstractClientPlayer;getFieldOfViewModifier()F"
+            )
+    )
+    private float removeSprintFromFov(AbstractClientPlayer player) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.options == null) return;
+        if (CursorStore.getFovMode() == 0) return player.getFieldOfViewModifier(); // 方案一
 
-        boolean thirdPerson = !mc.options.getCameraType().isFirstPerson()
+        boolean thirdPerson = mc.options != null
+                && !mc.options.getCameraType().isFirstPerson()
                 && !mc.options.getCameraType().isMirrored();
-        if (thirdPerson) {
-            cir.setReturnValue((double) mc.options.fov().get().intValue());
+
+        if (thirdPerson && player.isSprinting()) {
+            player.setSprinting(false);
+            float fov = player.getFieldOfViewModifier();
+            player.setSprinting(true);
+            return fov;
         }
+        return player.getFieldOfViewModifier();
     }
 }
