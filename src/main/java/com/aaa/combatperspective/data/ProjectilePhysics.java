@@ -7,6 +7,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
@@ -143,7 +147,7 @@ public class ProjectilePhysics {
             Vec3 newPos = new Vec3(x, y, z);
             
             // 碰撞检测
-            HitResult hit = checkCollision(level, lastPos, newPos, player);
+            HitResult hit = checkCollision(level, newPos, player);
             
             if (hit != null) {
                 // 找到落点
@@ -202,39 +206,36 @@ public class ProjectilePhysics {
     }
     
     /**
-     * 检测两点之间的碰撞（线段检测）
+     * 检测碰撞 - 使用弓箭物理轨迹检测
+     * 弓箭会沿抛物线飞行，碰到方块或实体就停止
      */
-    private static HitResult checkCollision(Level level, Vec3 start, Vec3 end, Entity exclude) {
+    private static HitResult checkCollision(Level level, Vec3 currentPos, Entity exclude) {
         
-        // 方块碰撞检测
-        ClipContext ctx = new ClipContext(
-            start, end,
-            ClipContext.Block.OUTLINE,
-            ClipContext.Fluid.NONE,
-            exclude
+        // 弓箭碰撞箱大小约 0.5 x 0.5 x 0.5
+        AABB arrowBox = new AABB(
+            currentPos.x - 0.15, currentPos.y - 0.15, currentPos.z - 0.15,
+            currentPos.x + 0.15, currentPos.y + 0.15, currentPos.z + 0.15
         );
         
-        BlockHitResult blockHit = level.clip(ctx);
-        
-        // 实体碰撞检测
-        AABB sweepBox = new AABB(start, end).inflate(0.3);
+        // 实体碰撞检测 - 检查弓箭是否碰到实体
         EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
             level, exclude,
-            start, end,
-            sweepBox,
+            currentPos, currentPos,
+            arrowBox,
             e -> !e.isSpectator() && e.isPickable() && e != exclude
         );
         
-        // 比较哪个更近
-        double blockDist = blockHit.getType() == HitResult.Type.BLOCK
-            ? start.distanceToSqr(blockHit.getLocation()) : Double.MAX_VALUE;
-        double entityDist = entityHit != null
-            ? start.distanceToSqr(entityHit.getLocation()) : Double.MAX_VALUE;
-        
-        if (entityDist < blockDist && entityHit != null) {
+        if (entityHit != null) {
             return entityHit;
-        } else if (blockHit.getType() == HitResult.Type.BLOCK) {
-            return blockHit;
+        }
+        
+        // 方块碰撞检测 - 检查弓箭是否碰到方块
+        BlockPos pos = BlockPos.containing(currentPos);
+        BlockState state = level.getBlockState(pos);
+        
+        // 如果不是空气方块，发生碰撞
+        if (!state.isAir()) {
+            return BlockHitResult.miss(currentPos, Direction.DOWN, pos);
         }
         
         return null;
