@@ -19,23 +19,20 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 public class ProjectilePhysics {
     
     // =========================================================================
-    // Minecraft 1.21 弓箭真实物理参数
+    // Minecraft 1.21 弓箭物理参数 (参考 Arrow 实体)
     // =========================================================================
     
-    /** 满蓄力弓箭初速度 (格/tick) - Minecraft 1.21 Arrow 实际值 */
+    /** 满蓄力弓箭初速度 (格/tick) */
     private static final double ARROW_MAX_POWER = 3.0;
     
-    /** 重力加速度 (blocks per tick²) - Minecraft 默认 gravity */
-    private static final double GRAVITY = 0.08;
+    /** 重力加速度 - Minecraft Entity 的默认 gravity 是 0.08 */
+    private static final double GRAVITY = 0.05;
     
-    /** 空气阻力系数 - 弓箭飞行时会逐渐减速 (更大阻力=更短距离) */
-    private static final double ARROW_DRAG = 0.993;
+    /** 空气阻力 - Minecraft 弓箭几乎没有阻力，但为了预测准确性加一点 */
+    private static final double ARROW_DRAG = 1.0;  // 无阻力，按原版
     
-    /** 最大飞行距离 (格) - 超过这个距离弓箭会停止 */
-    private static final double MAX_ARROW_DISTANCE = 80.0;
-    
-    /** 最小速度阈值 - 低于这个速度弓箭停止 */
-    private static final double MIN_VELOCITY = 0.05;
+    /** 最大飞行距离限制 */
+    private static final double MAX_ARROW_DISTANCE = 100.0;
     
     /**
      * 计算投射物轨迹
@@ -181,13 +178,7 @@ public class ProjectilePhysics {
                 return points;
             }
             
-            // 检查速度是否过低（弓箭停止）
-            double speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
-            if (speed < MIN_VELOCITY && currentDist > 5.0) {
-                ProjectileStore.update(new Vec3(x, y, z), 
-                    new net.minecraft.core.BlockPos((int)x, (int)y, (int)z), points);
-                return points;
-            }
+
             
             // 低于世界底部
             if (y < -64) {
