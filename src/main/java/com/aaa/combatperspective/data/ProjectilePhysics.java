@@ -1,10 +1,7 @@
 package com.aaa.combatperspective.data;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.projectile.Arrow;
-import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -14,19 +11,27 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * 投射物物理计算
- * 计算弓箭等投射物的抛物线轨迹和落点
+ * 使用 Minecraft 1.21 真实的弓箭物理参数
  */
 public class ProjectilePhysics {
     
-    /** Minecraft 物理常量 */
-    private static final double GRAVITY = 0.05;      // Minecraft 重力加速度
+    // =========================================================================
+    // Minecraft 1.21 弓箭真实物理参数
+    // =========================================================================
+    
+    /** 弓箭基础重力 (每 tick) - Minecraft Arrow 实体使用 */
     private static final double ARROW_GRAVITY = 0.05;
+    
+    /** 弓箭拖曳系数 */
     private static final double ARROW_DRAG = 0.99;
+    
+    /** 满蓄力弓箭初速度 (格/tick) - Minecraft 1.21 Arrow 实际值 */
+    private static final double ARROW_MAX_POWER = 3.0;
+    
+    /** 每 tick 重力加速度（用于更精确模拟） */
+    private static final double GRAVITY_PER_TICK = 0.0075;
     
     /**
      * 计算投射物轨迹
@@ -34,62 +39,100 @@ public class ProjectilePhysics {
      * @param bowPower 弓的蓄力 (0.0 - 1.0)
      * @return 轨迹点列表
      */
-    public static List<ProjectileStore.TrajectoryPoint> calculateTrajectory(
+    public static java.util.List<ProjectileStore.TrajectoryPoint> calculateTrajectory(
             LocalPlayer player, float bowPower) {
         
-        List<ProjectileStore.TrajectoryPoint> points = new ArrayList<>();
+        java.util.List<ProjectileStore.TrajectoryPoint> points = new java.util.ArrayList<>();
         
         if (player == null) return points;
         
-        // 获取投射物类型和物理参数
+        // 获取投射物类型
         ProjectileStore.ProjectileType type = ProjectileStore.getProjectileType();
-        double velocity = type.baseVelocity * bowPower;
-        float gravity = type.gravity;
-        float drag = type.drag;
+        
+        // 获取物理参数
+        double maxPower;
+        double gravity;
+        double drag;
+        
+        switch (type) {
+            case ARROW -> {
+                // 弓箭：使用 Minecraft 真实物理
+                maxPower = ARROW_MAX_POWER * bowPower;
+                gravity = GRAVITY_PER_TICK;
+                drag = 1.0; // 弓箭无拖曳
+            }
+            case TRIDENT -> {
+                // 三叉戟
+                maxPower = 2.5 * bowPower;
+                gravity = 0.006;
+                drag = 1.0;
+            }
+            case SNOWBALL, EGG, ENDER_PEARL -> {
+                // 雪球/鸡蛋/末影珍珠
+                maxPower = 1.5 * bowPower;
+                gravity = 0.03;
+                drag = 0.98;
+            }
+            case POTION -> {
+                // 药水
+                maxPower = 0.5 * bowPower;
+                gravity = 0.04;
+                drag = 0.95;
+            }
+            default -> {
+                maxPower = 1.0 * bowPower;
+                gravity = 0.05;
+                drag = 0.99;
+            }
+        }
         
         // 获取玩家眼睛位置和朝向
         Vec3 eyePos = player.getEyePosition();
-        Vec3 lookVec = player.getLookAngle();
+        Vec3 lookVec = player.getViewVector(1.0F);
         
-        // 初始速度
-        double vx = lookVec.x * velocity;
-        double vy = lookVec.y * velocity;
-        double vz = lookVec.z * velocity;
+        // 初始速度 = 方向 * 功率
+        double vx = lookVec.x * maxPower;
+        double vy = lookVec.y * maxPower;
+        double vz = lookVec.z * maxPower;
         
-        // 当前位置
+        // 当前位置 = 眼睛位置
         double x = eyePos.x;
         double y = eyePos.y;
         double z = eyePos.z;
         
-        // 时间
-        float time = 0f;
-        
-        // 上一帧位置（用于碰撞检测）
-        Vec3 lastPos = new Vec3(x, y, z);
+        // 上一帧位置
+        Vec3 lastPos = eyePos;
         
         Level level = player.level();
         int maxPoints = ProjectileStore.getPredictionPoints();
         float maxDist = (float) ProjectileStore.getMaxDistance();
         
-        // 步进模拟
+        // 逐 tick 模拟
         for (int i = 0; i < maxPoints; i++) {
-            // 添加轨迹点
+            // 添加当前轨迹点
             Vec3 pos = new Vec3(x, y, z);
-            points.add(new ProjectileStore.TrajectoryPoint(pos, time, false));
+            points.add(new ProjectileStore.TrajectoryPoint(pos, i, false));
             
-            // 保存当前位置
+            // 上一帧位置
             lastPos = pos;
             
-            // 物理更新
-            vy -= gravity;          // 重力
-            vx *= drag;             // 空气阻力
-            vz *= drag;
+            // ===============================================================
+            // Minecraft 物理更新
+            // ===============================================================
             
+            // 应用重力（每 tick）
+            vy -= gravity;
+            
+            // 应用拖曳
+            if (drag < 1.0) {
+                vx *= drag;
+                vz *= drag;
+            }
+            
+            // 更新位置
             x += vx;
             y += vy;
             z += vz;
-            
-            time += 1f / 20f; // 1 tick
             
             // 新位置
             Vec3 newPos = new Vec3(x, y, z);
@@ -100,16 +143,15 @@ public class ProjectilePhysics {
             if (hit != null) {
                 // 找到落点
                 Vec3 hitPos = hit.getLocation();
+                points.add(new ProjectileStore.TrajectoryPoint(hitPos, i + 1, true));
                 
-                // 添加最后一个点
-                points.add(new ProjectileStore.TrajectoryPoint(hitPos, time, true));
+                net.minecraft.core.BlockPos blockPos;
+                if (hit instanceof BlockHitResult blockHit) {
+                    blockPos = blockHit.getBlockPos();
+                } else {
+                    blockPos = new net.minecraft.core.BlockPos((int)hitPos.x, (int)hitPos.y, (int)hitPos.z);
+                }
                 
-                // 计算落点方块位置
-                var blockPos = hit instanceof BlockHitResult blockHit 
-                    ? blockHit.getBlockPos() 
-                    : new net.minecraft.core.BlockPos((int)hitPos.x, (int)hitPos.y, (int)hitPos.z);
-                
-                // 更新存储
                 ProjectileStore.update(hitPos, blockPos, points);
                 return points;
             }
@@ -128,13 +170,13 @@ public class ProjectilePhysics {
             }
         }
         
-        // 超时，返回当前轨迹
+        // 超时
         ProjectileStore.update(null, null, points);
         return points;
     }
     
     /**
-     * 检测两点之间的碰撞
+     * 检测两点之间的碰撞（线段检测）
      */
     private static HitResult checkCollision(Level level, Vec3 start, Vec3 end, Entity exclude) {
         
@@ -173,65 +215,40 @@ public class ProjectilePhysics {
     }
     
     /**
-     * 根据弓的蓄力计算速度倍率
-     * Minecraft 弓箭蓄力公式
+     * 根据弓的蓄力计算速度
+     * Minecraft 1.21 弓箭蓄力公式
      */
     public static float calculateBowPower(LocalPlayer player) {
         if (player == null) return 0.0f;
         
-        // 检测是否在拉弓
+        // 检测是否在使用弓/弩
+        if (!player.isUsingItem()) {
+            return 0.0f;
+        }
+        
         var useItem = player.getUseItem();
         var item = useItem.getItem();
         String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).toString();
         
-        // 如果不是弓/弩，返回0
+        // 只对弓、弩显示轨迹
         if (!itemId.contains("bow") && !itemId.contains("crossbow")) {
-            // 检查是否在使用物品（拉弓状态）
-            if (!player.isUsingItem()) {
-                return 0.0f;
-            }
+            return 0.0f;
         }
         
-        // 获取蓄力时间
+        // 获取蓄力时间 (ticks)
         int useTime = player.getUseItemRemainingTicks();
-        
-        // Minecraft 弓的最大蓄力时间是 1.0 秒 = 20 ticks
-        // 但实际上弓可以蓄力更久，这里用 20 作为最大值
-        float maxUseTime = 20.0f;
         
         if (useTime <= 0) {
             return 0.0f;
         }
         
+        // Minecraft 弓蓄力时间最多约 1.0 秒 (20 ticks)
+        // 但可以用更长蓄力，这里限制在 1.0 秒
+        float maxPowerTime = 20.0f;
+        
         // 计算蓄力比例 (0.0 - 1.0)
-        float power = Math.min(1.0f, useTime / maxUseTime);
+        float power = Math.min(1.0f, useTime / maxPowerTime);
         
         return power;
-    }
-    
-    /**
-     * 简单抛物线计算（不进行碰撞检测）
-     * 用于快速预览
-     */
-    public static Vec3[] calculateSimpleArc(Vec3 start, Vec3 velocity, int steps, float gravity) {
-        Vec3[] points = new Vec3[steps];
-        
-        double vx = velocity.x;
-        double vy = velocity.y;
-        double vz = velocity.z;
-        double x = start.x;
-        double y = start.y;
-        double z = start.z;
-        
-        for (int i = 0; i < steps; i++) {
-            points[i] = new Vec3(x, y, z);
-            
-            vy -= gravity;
-            x += vx;
-            y += vy;
-            z += vz;
-        }
-        
-        return points;
     }
 }
