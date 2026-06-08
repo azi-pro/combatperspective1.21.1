@@ -683,16 +683,19 @@ public class CombatPerspectiveClient {
         
         poseStack.pushPose();
         
-        // 绘制轨迹线
-        for (int i = 0; i < trajectory.size() - 1; i++) {
+        // 绘制圆润的抛物线轨迹（使用密集的点 + 颜色渐变）
+        int numSegments = trajectory.size() - 1;
+        for (int i = 0; i < numSegments; i++) {
             var p1 = trajectory.get(i);
             var p2 = trajectory.get(i + 1);
             
-            // 颜色透明度随距离渐变
+            // 计算距离和透明度
             double dist = p1.position.distanceTo(trajectory.get(0).position);
-            float fade = (float) Math.max(0.1, 1.0 - dist / 60.0);
-            int alpha = (int) (fade * 180);
-            int color = (alpha << 24) | 0xFFAA00;
+            float fade = (float) Math.max(0.15, 1.0 - dist / 80.0);
+            int alpha = (int) (fade * 220);
+            
+            // 主轨迹线颜色（橙黄色）
+            int lineColor = (alpha << 24) | 0xFFAA00;
             
             float x1 = (float)(p1.position.x - camPos.x);
             float y1 = (float)(p1.position.y - camPos.y);
@@ -701,55 +704,99 @@ public class CombatPerspectiveClient {
             float y2 = (float)(p2.position.y - camPos.y);
             float z2 = (float)(p2.position.z - camPos.z);
             
-            buf.addVertex(mat, x1, y1, z1).setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
-            buf.addVertex(mat, x2, y2, z2).setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            // 绘制主轨迹线
+            buf.addVertex(mat, x1, y1, z1).setColor(lineColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, x2, y2, z2).setColor(lineColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            
+            // 在每个轨迹点上绘制小圆点标记（增加圆润感）
+            if (i % 2 == 0) {
+                float px = x2, py = y2, pz = z2;
+                float dotRadius = 0.03f + (fade * 0.02f);
+                int dotAlpha = (int) (alpha * 0.8);
+                int dotColor = (dotAlpha << 24) | 0xFFFF88;
+                
+                // 绘制小圆点（8个点组成的近似圆）
+                for (int j = 0; j < 8; j++) {
+                    float a1 = (float)(j * Math.PI * 2 / 8);
+                    float a2 = (float)((j + 1) * Math.PI * 2 / 8);
+                    
+                    buf.addVertex(mat, px + (float)(Math.cos(a1) * dotRadius), py, pz + (float)(Math.sin(a1) * dotRadius))
+                        .setColor(dotColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+                    buf.addVertex(mat, px + (float)(Math.cos(a2) * dotRadius), py, pz + (float)(Math.sin(a2) * dotRadius))
+                        .setColor(dotColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+                }
+            }
         }
         
-        // 绘制轨迹点
-        for (int i = 0; i < trajectory.size(); i += 4) {
-            var point = trajectory.get(i);
-            float x = (float)(point.position.x - camPos.x);
-            float y = (float)(point.position.y - camPos.y);
-            float z = (float)(point.position.z - camPos.z);
-            
-            float dotSize = 0.05f;
-            int dotColor = 0xAAFFFF00;
-            
-            buf.addVertex(mat, x - dotSize, y, z).setColor(dotColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
-            buf.addVertex(mat, x + dotSize, y, z).setColor(dotColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
-            buf.addVertex(mat, x, y - dotSize, z).setColor(dotColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
-            buf.addVertex(mat, x, y + dotSize, z).setColor(dotColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
-        }
-        
-        // 绘制落点标记
+        // 绘制落点标记（更大更醒目）
         Vec3 landingPos = ProjectileStore.getLandingPos();
         if (landingPos != null) {
             float lx = (float)(landingPos.x - camPos.x);
             float ly = (float)(landingPos.y - camPos.y);
             float lz = (float)(landingPos.z - camPos.z);
             
-            // 落点十字
-            float size = 0.4f;
-            buf.addVertex(mat, lx - size, ly, lz - size).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
-            buf.addVertex(mat, lx + size, ly, lz + size).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
-            buf.addVertex(mat, lx + size, ly, lz - size).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
-            buf.addVertex(mat, lx - size, ly, lz + size).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            // 落点高亮颜色（明亮的绿色）
+            int landingColor = 0xFF00FF00;
+            int landingHighlight = 0xFFFFFF00;  // 黄色高亮
             
-            // 垂直线
-            buf.addVertex(mat, lx, ly - size, lz).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
-            buf.addVertex(mat, lx, ly + size, lz).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
-            
-            // 落点圆圈
-            float radius = 0.5f;
-            int segments = 20;
+            // 外圈（大圆，绿色）
+            float outerRadius = 0.8f;
+            int segments = 24;
             for (int i = 0; i < segments; i++) {
                 float a1 = (float)(i * 2 * Math.PI / segments);
                 float a2 = (float)((i + 1) * 2 * Math.PI / segments);
                 
-                buf.addVertex(mat, lx + (float)(Math.cos(a1) * radius), ly, lz + (float)(Math.sin(a1) * radius))
-                    .setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
-                buf.addVertex(mat, lx + (float)(Math.cos(a2) * radius), ly, lz + (float)(Math.sin(a2) * radius))
-                    .setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+                buf.addVertex(mat, lx + (float)(Math.cos(a1) * outerRadius), ly, lz + (float)(Math.sin(a1) * outerRadius))
+                    .setColor(landingColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+                buf.addVertex(mat, lx + (float)(Math.cos(a2) * outerRadius), ly, lz + (float)(Math.sin(a2) * outerRadius))
+                    .setColor(landingColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            }
+            
+            // 内圈（小圆，黄色）
+            float innerRadius = 0.4f;
+            for (int i = 0; i < segments; i++) {
+                float a1 = (float)(i * 2 * Math.PI / segments);
+                float a2 = (float)((i + 1) * 2 * Math.PI / segments);
+                
+                buf.addVertex(mat, lx + (float)(Math.cos(a1) * innerRadius), ly, lz + (float)(Math.sin(a1) * innerRadius))
+                    .setColor(landingHighlight).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+                buf.addVertex(mat, lx + (float)(Math.cos(a2) * innerRadius), ly, lz + (float)(Math.sin(a2) * innerRadius))
+                    .setColor(landingHighlight).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            }
+            
+            // 落点十字（更大）
+            float crossSize = 0.6f;
+            buf.addVertex(mat, lx - crossSize, ly, lz - crossSize).setColor(landingHighlight).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, lx + crossSize, ly, lz + crossSize).setColor(landingHighlight).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, lx + crossSize, ly, lz - crossSize).setColor(landingHighlight).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, lx - crossSize, ly, lz + crossSize).setColor(landingHighlight).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            
+            // 垂直线（指向落点）
+            buf.addVertex(mat, lx, ly - crossSize, lz).setColor(landingHighlight).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, lx, ly + crossSize, lz).setColor(landingHighlight).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            
+            // 从落点延伸的虚线（表示弓箭飞行的最后阶段）
+            if (trajectory.size() >= 3) {
+                var penultimate = trajectory.get(trajectory.size() - 2);
+                float px = (float)(penultimate.position.x - camPos.x);
+                float py = (float)(penultimate.position.y - camPos.y);
+                float pz = (float)(penultimate.position.z - camPos.z);
+                
+                int dashedColor = (150 << 24) | 0xFFAA00;
+                for (int i = 0; i < 5; i++) {
+                    float t1 = 0.2f + i * 0.15f;
+                    float t2 = t1 + 0.1f;
+                    
+                    float xDash1 = px + (lx - px) * t1;
+                    float yDash1 = py + (ly - py) * t1;
+                    float zDash1 = pz + (lz - pz) * t1;
+                    float xDash2 = px + (lx - px) * t2;
+                    float yDash2 = py + (ly - py) * t2;
+                    float zDash2 = pz + (lz - pz) * t2;
+                    
+                    buf.addVertex(mat, xDash1, yDash1, zDash1).setColor(dashedColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+                    buf.addVertex(mat, xDash2, yDash2, zDash2).setColor(dashedColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+                }
             }
         }
         
