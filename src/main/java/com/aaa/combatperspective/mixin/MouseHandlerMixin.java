@@ -81,6 +81,11 @@ public class MouseHandlerMixin {
     private void lockCameraInThirdPerson(double movementTime, CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
         if (isthirdPersonback(mc) && mc.screen == null) {
+            // 如果正在蓄力弓，允许转动视角
+            if (mc.player != null && mc.player.isUsingItem()) {
+                // 允许转动 - 不取消
+                return;
+            }
             ci.cancel();
         }
     }
