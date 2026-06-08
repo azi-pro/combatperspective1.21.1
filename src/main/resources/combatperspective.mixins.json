@@ -22,7 +22,8 @@
     "MouseHandlerMixin"
   ],
   "client": [
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "ProjectileTrajectoryMixin"
   ],
   "injectors": {
     "defaultRequire": 1

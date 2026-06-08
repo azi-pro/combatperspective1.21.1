@@ -38,3 +38,16 @@ run/
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/
+
+# === NeoForge API Documentation ===
+# Git clone for offline docs reference
+docs/neoforge/.git/
+
+# === Minecraft Official Wiki (large files) ===
+docs/minecraft-wiki/Java_Edition/*.html
+docs/minecraft-wiki/Related/*.html
+
+# Keep README only
+!docs/minecraft-wiki/Java_Edition/
+!docs/minecraft-wiki/Related/
+!docs/minecraft-wiki/README.md

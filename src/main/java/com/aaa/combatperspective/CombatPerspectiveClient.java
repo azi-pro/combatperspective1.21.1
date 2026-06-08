@@ -6,6 +6,7 @@ package com.aaa.combatperspective;
 
 // 导入 CursorStore 数据存储类，用于在 Mixin 之间共享数据
 import com.aaa.combatperspective.data.HitStore;
+import com.aaa.combatperspective.data.ProjectileStore;
 
 // 导入 Blaze3D 渲染系统，用于控制深度测试等渲染状态
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -344,6 +345,12 @@ public class CombatPerspectiveClient {
             poseStack.popPose();
         }
 
+        // ---- 第三部分：绘制投射物抛物线轨迹 ----
+        var trajectory = ProjectileStore.getTrajectoryPoints();
+        if (ProjectileStore.isEnabled() && !trajectory.isEmpty()) {
+            renderProjectileTrajectory(poseStack, bufferSource, camPos, trajectory);
+        }
+
         // 重新启用深度测试，恢复正常渲染
         RenderSystem.enableDepthTest();
     }
@@ -648,5 +655,104 @@ public class CombatPerspectiveClient {
                 cx + ux + vx, cy + uy + vy, cz + uz + vz,  // 右上
                 cx + ux - vx, cy + uy - vy, cz + uz - vz,  // 左上
         };
+    }
+
+
+    // =========================================================================
+    // ===================== 投射物抛物线轨迹渲染 =====================
+    // =========================================================================
+
+    /** 抛物线轨迹颜色 (淡黄色) */
+    private static final int TRAJECTORY_COLOR = 0x80FFAA00;
+    
+    /** 落点标记颜色 (绿色) */
+    private static final int LANDING_COLOR = 0xFF00FF00;
+
+    /**
+     * 渲染投射物抛物线轨迹
+     */
+    private static void renderProjectileTrajectory(PoseStack poseStack,
+                                                   MultiBufferSource.BufferSource bufferSource,
+                                                   Vec3 camPos,
+                                                   java.util.List<ProjectileStore.TrajectoryPoint> trajectory) {
+        
+        if (trajectory.size() < 2) return;
+        
+        VertexConsumer buf = bufferSource.getBuffer(RenderType.LINES);
+        Matrix4f mat = poseStack.last().pose();
+        
+        poseStack.pushPose();
+        
+        // 绘制轨迹线
+        for (int i = 0; i < trajectory.size() - 1; i++) {
+            var p1 = trajectory.get(i);
+            var p2 = trajectory.get(i + 1);
+            
+            // 颜色透明度随距离渐变
+            double dist = p1.position.distanceTo(trajectory.get(0).position);
+            float fade = (float) Math.max(0.1, 1.0 - dist / 60.0);
+            int alpha = (int) (fade * 180);
+            int color = (alpha << 24) | 0xFFAA00;
+            
+            float x1 = (float)(p1.position.x - camPos.x);
+            float y1 = (float)(p1.position.y - camPos.y);
+            float z1 = (float)(p1.position.z - camPos.z);
+            float x2 = (float)(p2.position.x - camPos.x);
+            float y2 = (float)(p2.position.y - camPos.y);
+            float z2 = (float)(p2.position.z - camPos.z);
+            
+            buf.addVertex(mat, x1, y1, z1).setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, x2, y2, z2).setColor(color).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+        }
+        
+        // 绘制轨迹点
+        for (int i = 0; i < trajectory.size(); i += 4) {
+            var point = trajectory.get(i);
+            float x = (float)(point.position.x - camPos.x);
+            float y = (float)(point.position.y - camPos.y);
+            float z = (float)(point.position.z - camPos.z);
+            
+            float dotSize = 0.05f;
+            int dotColor = 0xAAFFFF00;
+            
+            buf.addVertex(mat, x - dotSize, y, z).setColor(dotColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, x + dotSize, y, z).setColor(dotColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, x, y - dotSize, z).setColor(dotColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, x, y + dotSize, z).setColor(dotColor).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+        }
+        
+        // 绘制落点标记
+        Vec3 landingPos = ProjectileStore.getLandingPos();
+        if (landingPos != null) {
+            float lx = (float)(landingPos.x - camPos.x);
+            float ly = (float)(landingPos.y - camPos.y);
+            float lz = (float)(landingPos.z - camPos.z);
+            
+            // 落点十字
+            float size = 0.4f;
+            buf.addVertex(mat, lx - size, ly, lz - size).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, lx + size, ly, lz + size).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, lx + size, ly, lz - size).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, lx - size, ly, lz + size).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            
+            // 垂直线
+            buf.addVertex(mat, lx, ly - size, lz).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            buf.addVertex(mat, lx, ly + size, lz).setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            
+            // 落点圆圈
+            float radius = 0.5f;
+            int segments = 20;
+            for (int i = 0; i < segments; i++) {
+                float a1 = (float)(i * 2 * Math.PI / segments);
+                float a2 = (float)((i + 1) * 2 * Math.PI / segments);
+                
+                buf.addVertex(mat, lx + (float)(Math.cos(a1) * radius), ly, lz + (float)(Math.sin(a1) * radius))
+                    .setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+                buf.addVertex(mat, lx + (float)(Math.cos(a2) * radius), ly, lz + (float)(Math.sin(a2) * radius))
+                    .setColor(LANDING_COLOR).setNormal(0, 1, 0).setUv(0, 0).setUv2(240, 240);
+            }
+        }
+        
+        poseStack.popPose();
     }
 }
