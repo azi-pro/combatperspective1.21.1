@@ -235,32 +235,41 @@ public class ProjectilePhysics {
             return 0.0f;
         }
         
-        // 获取蓄力时间 (ticks)
-        int useTime = player.getUseItemRemainingTicks();
+        // ===============================================================
+        // 计算蓄力比例
+        // getUseItemDuration() = 总共可使用时间 (如弓最大 20 ticks)
+        // getUseItemRemainingTicks() = 剩余时间
+        // 已使用时间 = 总时间 - 剩余时间
+        // ===============================================================
+        // ===============================================================
+        // Minecraft 蓄力机制：
+        // - getUseItemRemainingTicks() 从 72000 开始递减
+        // - 弓蓄力 20 ticks (1秒) 即可达到最大威力
+        // - 所以蓄力比例 = 已使用时间 / 20
+        // ===============================================================
+        final int MAX_CHARGE_TICKS = 20;
         
-        if (useTime <= 0) {
-            return 0.0f;
-        }
+        // 剩余时间 (从 72000 递减)
+        int remaining = player.getUseItemRemainingTicks();
         
-        // Minecraft 弓最大蓄力时间约 1.0 秒 (20 ticks)
-        float maxChargeTime = 20.0f;
+        // 已蓄力时间 = 72000 - remaining
+        // 但限制在 MAX_CHARGE_TICKS 范围内
+        int chargeProgress = Math.min(MAX_CHARGE_TICKS, 72000 - remaining);
+        
+        // 已使用时间
+        int usedTime = chargeProgress;
         
         // 蓄力比例 (0.0 - 1.0)
-        float chargeRatio = Math.min(1.0f, useTime / maxChargeTime);
+        float chargeRatio = (float) usedTime / MAX_CHARGE_TICKS;
         
         // ===============================================================
         // Minecraft 非线性蓄力公式
         // 来源: net.minecraft.world.item.BowItem
-        // f = (f^2 + f*2) / 3
+        // power = (chargeRatio^2 + chargeRatio*2) / 3
         // 这使得初期蓄力更快，后期较慢
         // ===============================================================
         float power = (chargeRatio * chargeRatio + chargeRatio * 2.0f) / 3.0f;
         
-        // 限制最大为 1.0
-        if (power > 1.0f) {
-            power = 1.0f;
-        }
-        
-        return power;
+        return Math.max(0.0f, Math.min(1.0f, power));
     }
 }
