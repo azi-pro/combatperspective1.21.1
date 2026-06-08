@@ -28,14 +28,14 @@ public class ProjectilePhysics {
     /** 重力加速度 (blocks per tick²) - Minecraft 默认 gravity */
     private static final double GRAVITY = 0.08;
     
-    /** 空气阻力系数 - 弓箭飞行时会逐渐减速 */
-    private static final double ARROW_DRAG = 0.998;
+    /** 空气阻力系数 - 弓箭飞行时会逐渐减速 (更大阻力=更短距离) */
+    private static final double ARROW_DRAG = 0.993;
     
     /** 最大飞行距离 (格) - 超过这个距离弓箭会停止 */
-    private static final double MAX_ARROW_DISTANCE = 120.0;
+    private static final double MAX_ARROW_DISTANCE = 80.0;
     
     /** 最小速度阈值 - 低于这个速度弓箭停止 */
-    private static final double MIN_VELOCITY = 0.01;
+    private static final double MIN_VELOCITY = 0.05;
     
     /**
      * 计算投射物轨迹
